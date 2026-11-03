@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kiyora Hub</title>
+<style>:root{--bg:#f7f7fb;--fg:#14121f;--card:#fff;--bd:#e3e1ef;--ac:#4f46e5}@media(prefers-color-scheme:dark){:root{--bg:#0b0b14;--fg:#f1eefc;--card:#14141f;--bd:#2a2a3d;--ac:#9a9bff}}
+body{margin:0;font:16px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--fg)}main{max-width:760px;margin:0 auto;padding:16px}header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bd)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin:12px 0}button,input,select,textarea{font:inherit;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--fg)}
+input,textarea,select{width:100%;box-sizing:border-box;margin:4px 0 10px}button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}:focus-visible{outline:3px solid var(--ac)}.mut{opacity:.7}</style></head>
+<body><header><strong>Kiyora Hub</strong><span id="who"></span></header><main id="app" aria-live="polite"></main>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// 1) Cole aqui a configuração do seu projeto (Console Firebase > Configurações do projeto > Seus apps > Web)
+const cfg={apiKey:"AIzaSyAm1rzR2BibUv5uqFXpXtzx55FMd34zXM4",authDomain:"kiyora-hub-6c399.firebaseapp.com",projectId:"kiyora-hub-6c399",storageBucket:"kiyora-hub-6c399.firebasestorage.app",messagingSenderId:"488033548693",appId:"1:488033548693:web:8eb504f096445572c9de9c"};
+firebase.initializeApp(cfg);const auth=firebase.auth(),db=firebase.firestore();
+const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const KINDS={music:"Músicas",media:"Vídeos e fotos",rent:"Aluguéis",code:"Códigos"};
+let me=null,P={},posts=[],likes=[],cms=[],kind="code",subs=[],msg="";
+const name=id=>esc(P[id]?.name||"Usuário");
+function listen(){subs.forEach(u=>u());subs=[
+ db.collection("profiles").onSnapshot(s=>{P={};s.docs.forEach(d=>P[d.id]=d.data());render()}),
+ db.collection("posts").orderBy("at","desc").limit(50).onSnapshot(s=>{posts=s.docs.map(d=>({...d.data(),id:d.id}));render()}),
+ db.collection("likes").onSnapshot(s=>{likes=s.docs.map(d=>({...d.data(),id:d.id}));render()}),
+ db.collection("comments").orderBy("at").limit(300).onSnapshot(s=>{cms=s.docs.map(d=>({...d.data(),id:d.id}));render()})]}
+auth.onAuthStateChanged(u=>{me=u;$("#who").innerHTML=u?`${esc(u.email)} <button id="out">Sair</button>`:"";if(u){listen();$("#out").onclick=()=>auth.signOut()}else{subs.forEach(x=>x());subs=[]}render()});
+function render(){const a=$("#app");
+ if(!me){a.innerHTML=`<div class="card"><h1>Entrar no Kiyora Hub</h1><button class="p" id="g">Entrar com Google</button><form id="ef"><label>E-mail<input id="em" type="email" required autocomplete="email"></label><label>Senha<input id="pw" type="password" minlength="6" required autocomplete="current-password"></label><button class="p" data-m="in">Entrar</button> <button data-m="up">Criar conta</button> <button type="button" id="rs">Esqueci a senha</button></form><p id="msg" role="status">${esc(msg)}</p><p class="mut">Ao criar conta você aceita os Termos e a Política de Privacidade.</p></div>`;
+  const er=e=>{msg=e.code||"Erro";render()};
+  $("#g").onclick=()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(er);
+  $("#ef").onsubmit=async e=>{e.preventDefault();const m=e.submitter.dataset.m,em=$("#em").value,pw=$("#pw").value;try{if(m==="up"){const c=await auth.createUserWithEmailAndPassword(em,pw);await c.user.sendEmailVerification();msg="Conta criada. Confirme seu e-mail."}else await auth.signInWithEmailAndPassword(em,pw)}catch(x){er(x)}};
+  $("#rs").onclick=()=>auth.sendPasswordResetEmail($("#em").value).then(()=>{msg="Enviamos o link de redefinição.";render()}).catch(er);return}
+ if(!P[me.uid]){a.innerHTML=`<div class="card"><h1>Crie seu perfil</h1><form id="pf"><label>Nome de exibição<input id="pn" maxlength="40" required></label><label>Bio<textarea id="pb" maxlength="200" rows="2"></textarea></label><button class="p">Criar perfil</button></form></div>`;
+  $("#pf").onsubmit=e=>{e.preventDefault();db.collection("profiles").doc(me.uid).set({name:$("#pn").value.trim(),bio:$("#pb").value,avatar:"",banner:"",createdAt:Date.now()})};return}
+ const ps=posts.filter(p=>p.kind===kind);
+ a.innerHTML=`<nav>${Object.entries(KINDS).map(([k,l])=>`<button data-k="${k}" ${k===kind?'class="p"':""}>${l}</button>`).join(" ")}</nav>
+ <form id="np" class="card"><label>Título<input id="t" maxlength="100" required></label><label>Descrição ou código<textarea id="b" rows="3" maxlength="5000"></textarea></label><button class="p">Publicar em ${KINDS[kind]}</button></form>
+ ${ps.map(p=>{const l=likes.filter(x=>x.post===p.id),mine=l.some(x=>x.uid===me.uid),cs=cms.filter(c=>c.post===p.id);
+ return `<article class="card"><h3>${esc(p.title)}</h3><div class="mut">por ${name(p.uid)}</div><pre style="white-space:pre-wrap">${esc(p.body)}</pre><button data-l="${p.id}">${mine?"Curtido":"Curtir"} · ${l.length}</button>${p.uid===me.uid?` <button data-d="${p.id}">Excluir</button>`:""}
+ ${cs.map(c=>`<p><strong>${name(c.uid)}:</strong> ${esc(c.text)}</p>`).join("")}<form data-c="${p.id}"><input maxlength="300" placeholder="Comentar" required aria-label="Comentar"></form></article>`}).join("")||'<p class="mut">Nada publicado ainda.</p>'}`;
+ a.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{kind=b.dataset.k;render()});
+ $("#np").onsubmit=async e=>{e.preventDefault();await db.collection("posts").add({kind,uid:me.uid,title:$("#t").value.trim(),body:$("#b").value,tags:[],at:Date.now()}).catch(x=>alert(x.code))};
+ a.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{const id=b.dataset.l,k=id+"_"+me.uid,r=db.collection("likes").doc(k);likes.some(x=>x.id===k)?r.delete():r.set({post:id,uid:me.uid})});
+ a.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>confirm("Excluir?")&&db.collection("posts").doc(b.dataset.d).delete());
+ a.querySelectorAll("[data-c]").forEach(f=>f.onsubmit=e=>{e.preventDefault();db.collection("comments").add({post:f.dataset.c,uid:me.uid,text:f.querySelector("input").value.trim(),at:Date.now()})})}
+</script></body></html>
