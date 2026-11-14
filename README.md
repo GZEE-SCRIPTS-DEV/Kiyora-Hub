@@ -1,6 +1,6 @@
 # Kiyora Hub
 
-Comunidade para divulgar músicas, vídeos, fotos, bots, automações e códigos, com perfis, seguidores, curtidas e comentários.
+Comunidade para divulgar vídeos, fotos, bots, automações e códigos, com perfis, seguidores, curtidas e comentários.
 
 **Acesse:** https://kiyora-hub.pages.dev/
 
