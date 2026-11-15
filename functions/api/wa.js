@@ -1,6 +1,6 @@
 // Cloudflare Pages Function: GET /api/wa?url=<link de canal ou grupo do WhatsApp>
 // Lê a página pública do WhatsApp e devolve nome, foto, descrição e seguidores.
-const J = (o, s = 200, h = {}) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", ...h } });
+const J = (o, s = 200, h = {}) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", "x-content-type-options": "nosniff", ...h } });
 const ent = (s) => s.replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d)).replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 
 function toNum(t) {
@@ -42,7 +42,50 @@ function parseWa(html) {
   return { name, image, description: description.slice(0, 300), followersText, followers: toNum(fm && fm[1]) };
 }
 
+
+const WA_HOST = /^(?:www\.)?whatsapp\.com$|^chat\.whatsapp\.com$/i;
+const IMG_HOST = /(^|\.)(whatsapp\.net|fbcdn\.net|whatsapp\.com)$/i;
+const MAX_HTML = 1500000, MAX_IMG = 700000;
+
+// fetch que só segue redirecionamentos para hosts permitidos (evita SSRF / open redirect)
+async function safeFetch(url, opts, hostOk, hops = 3) {
+  let u = new URL(url);
+  for (let i = 0; i <= hops; i++) {
+    if (u.protocol !== "https:" || !hostOk.test(u.hostname)) throw new Error("host_bloqueado");
+    const r = await fetch(u.href, { ...opts, redirect: "manual", signal: AbortSignal.timeout(8000) });
+    if (r.status >= 300 && r.status < 400 && r.headers.get("location")) { u = new URL(r.headers.get("location"), u); continue; }
+    return r;
+  }
+  throw new Error("redirecionamentos_demais");
+}
+
+// lê o corpo com limite de bytes (não depende do content-length)
+async function readLimited(r, max) {
+  const reader = r.body.getReader(), chunks = []; let n = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    n += value.length;
+    if (n > max) { try { await reader.cancel(); } catch {} return null; }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(n); let o = 0;
+  for (const c of chunks) { out.set(c, o); o += c.length; }
+  return out;
+}
+
+// só aceita chamadas feitas pelo próprio site (impede uso como proxy por outros sites)
+function sameSite(request) {
+  const self = new URL(request.url).origin;
+  const origin = request.headers.get("origin");
+  if (origin && origin !== self) return false;
+  const sfs = request.headers.get("sec-fetch-site");
+  if (sfs && !["same-origin", "same-site", "none"].includes(sfs)) return false;
+  return true;
+}
+
 export async function onRequestGet({ request }) {
+  if (!sameSite(request)) return J({ ok: false, error: "origem_nao_permitida" }, 403);
   let t;
   try { t = new URL(new URL(request.url).searchParams.get("url") || ""); } catch { return J({ ok: false, error: "link_invalido" }, 400); }
   const host = t.hostname.toLowerCase().replace(/^www\./, "");
@@ -58,21 +101,24 @@ export async function onRequestGet({ request }) {
 
   let r;
   try {
-    r = await fetch(clean + (type === "channel" ? "?lang=pt" : ""), { headers: { "user-agent": "Mozilla/5.0 (compatible; KiyoraHubLinkPreview/1.0)", "accept-language": "pt-BR,pt;q=0.9,en;q=0.5" }, redirect: "follow" });
+    r = await safeFetch(clean + (type === "channel" ? "?lang=pt" : ""), { headers: { "user-agent": "Mozilla/5.0 (compatible; KiyoraHubLinkPreview/1.0)", "accept-language": "pt-BR,pt;q=0.9,en;q=0.5" } }, WA_HOST);
   } catch { return J({ ok: false, error: "falha_rede" }, 502); }
   if (!r.ok) return J({ ok: false, error: "nao_encontrado" }, 404);
-  const p = parseWa(await r.text());
+  const htmlBytes = await readLimited(r, MAX_HTML);
+  if (!htmlBytes) return J({ ok: false, error: "sem_dados" }, 422);
+  const p = parseWa(new TextDecoder("utf-8").decode(htmlBytes));
   if (!p.name) return J({ ok: false, error: "sem_dados" }, 422);
 
   let image = "";
   try {
     const u = new URL(p.image);
-    if (/(^|\.)(whatsapp\.net|fbcdn\.net|whatsapp\.com)$/i.test(u.hostname)) {
-      const ir = await fetch(u.href);
-      const ct = (ir.headers.get("content-type") || "").split(";")[0];
-      if (ir.ok && /^image\//.test(ct) && (+ir.headers.get("content-length") || 0) <= 700000) {
-        const buf = new Uint8Array(await ir.arrayBuffer());
-        if (buf.length <= 700000) {
+    if (u.protocol === "https:" && IMG_HOST.test(u.hostname)) {
+      const ir = await safeFetch(u.href, {}, IMG_HOST);
+      const ct = (ir.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+      // svg fica de fora: só formatos raster
+      if (ir.ok && /^image\/(png|jpe?g|webp|gif)$/.test(ct)) {
+        const buf = await readLimited(ir, MAX_IMG);
+        if (buf) {
           let s = "";
           for (let i = 0; i < buf.length; i += 8192) s += String.fromCharCode(...buf.subarray(i, i + 8192));
           image = "data:" + ct + ";base64," + btoa(s);
