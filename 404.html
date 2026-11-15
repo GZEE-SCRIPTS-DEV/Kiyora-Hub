@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+/* A página 404 abre em qualquer caminho: fixa a base para imagens e links não quebrarem. */
+(function(){var R="kiyora-hub",p=location.pathname,g=p.split("/")[1]||"",b="/";if(/\.github\.io$/.test(location.hostname)&&g.toLowerCase()===R)b="/"+g+"/";document.write('<base href="'+b+'">')})();
+</script>
+<title>Página não encontrada: volte ao início | Kiyora Hub</title>
+<meta name="description" content="Não encontramos essa página, mas é fácil voltar: toque na tela para ir ao início do Kiyora Hub e continuar de onde parou.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"><link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#07040f">
+<link rel="preload" as="image" href="404-desktop.webp" media="(min-width:761px) and (min-aspect-ratio:5/4)">
+<style>
+:root{--bg:#07040f;--fg:#f1eefc;--mut:#cfc9ea;--ac:#b794ff;box-sizing:border-box}
+*,*:before,*:after{box-sizing:inherit}
+html,body{margin:0;max-width:100%;overflow-x:clip}
+body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font:16px/1.6 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-wrap:anywhere}
+.vh{position:absolute;left:-9999px}
+main{flex:1;display:flex;flex-direction:column;min-height:0}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:3px solid var(--ac);outline-offset:-3px}
+.desk{flex:1;position:relative;display:block;min-height:100vh;min-height:100dvh}
+.desk img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 45%;display:block}
+.mob{display:none;position:relative;text-align:center;padding:22px 16px}
+.mlogo{display:block;width:min(86vw,340px);height:auto;margin:0 auto;-webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)}
+.code{font-size:clamp(5rem,30vw,8.5rem);font-weight:800;line-height:1;letter-spacing:-.04em;margin:4px 0 0;background:linear-gradient(180deg,#fff,#b57bff 65%,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 18px rgba(168,85,247,.55))}
+.mob h1{font-size:clamp(1.35rem,6.4vw,1.9rem);line-height:1.15;margin:6px 0 10px;text-transform:uppercase;letter-spacing:-.01em}.mob h1 span{color:#a855f7}
+.msg{color:var(--mut);margin:0 auto;max-width:34ch}
+@media (max-width:760px),(max-aspect-ratio:5/4){
+ body:before{content:"";position:fixed;inset:0;background:url(404-desktop.webp) center/cover;opacity:.28;filter:blur(16px);z-index:-1}
+ main{justify-content:center}
+ .desk{display:none}.mob{display:block}
+}
+</style></head>
+<body>
+<main>
+<a class="desk" href="./" aria-label="Voltar para a página inicial"><img src="404-desktop.webp" alt="404. Página não encontrada. A página que você procura não existe, foi removida ou o link está incorreto. Toque para voltar à página inicial." width="1672" height="941" fetchpriority="high" decoding="async"><h1 class="vh">Página não encontrada</h1></a>
+<a class="mob" href="./" aria-label="Página não encontrada. Voltar para a página inicial"><img class="mlogo" src="404-logo.webp" alt="" width="690" height="305" fetchpriority="high" decoding="async"><p class="code" aria-hidden="true">404</p><h1>Página <span>não encontrada</span></h1><p class="msg">A página que você procura não existe, foi removida ou o link está incorreto.</p></a>
+</main>
+</body></html>
