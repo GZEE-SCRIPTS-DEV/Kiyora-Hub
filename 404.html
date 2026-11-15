@@ -4,10 +4,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090611">
 <meta name="robots" content="noindex">
-<title>404 | Kiyora Hub</title>
+<title>404 — Kiyora Hub</title>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --purple: #a855f7;
+  --pink: #e879c6;
+  --white: #f7edff;
+  --muted: #aaa0bd;
+  --bg: #090611;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -16,37 +27,91 @@
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(ellipse at 50% 0%, #64209a44, transparent 55%),
+    radial-gradient(ellipse at 100% 100%, #a3267b22, transparent 45%),
+    var(--bg);
+  color: var(--white);
+  font-family: Inter, sans-serif;
+}
+
+/* FUNDO */
+
+.background {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  opacity: .13;
+  background-image:
+    linear-gradient(#a855f7 1px, transparent 1px),
+    linear-gradient(90deg, #a855f7 1px, transparent 1px);
+  background-size: 55px 55px;
+  mask-image: linear-gradient(to bottom, black, transparent);
+}
+
+.moon {
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  top: 8%;
+  right: 8%;
+  background: radial-gradient(circle, #e8caff33, #a855f711 65%, transparent 70%);
+  box-shadow: 0 0 100px #a855f722;
+}
+
+.petal {
+  position: absolute;
+  top: -30px;
+  color: #e879c6;
+  opacity: .55;
+  animation: fall linear infinite;
+}
+
+.petal:nth-child(3) { left: 10%; animation-duration: 12s; }
+.petal:nth-child(4) { left: 30%; animation-duration: 17s; animation-delay: 3s; }
+.petal:nth-child(5) { left: 65%; animation-duration: 14s; animation-delay: 2s; }
+.petal:nth-child(6) { left: 88%; animation-duration: 19s; animation-delay: 5s; }
+
+@keyframes fall {
+  to {
+    transform: translateY(110vh) rotate(720deg);
+  }
+}
+
+/* CONTEÚDO */
+
+main {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  padding: 20px;
-  font-family: Inter, Arial, sans-serif;
-  color: #fff;
-  background:
-    radial-gradient(circle at 15% 15%, #58118b55, transparent 40%),
-    radial-gradient(circle at 85% 85%, #a020b955, transparent 40%),
-    #080610;
+  padding: 35px 20px;
 }
 
-.container {
+.wrapper {
   width: 100%;
-  max-width: 650px;
+  max-width: 850px;
   text-align: center;
-  padding: 40px 25px;
-  position: relative;
-  border: 1px solid #a020ff44;
-  border-radius: 25px;
-  background: #100b1dcc;
-  box-shadow: 0 0 60px #8b16ff22;
-  backdrop-filter: blur(15px);
-  animation: appear .8s ease;
+  animation: entrance 1s ease;
 }
 
-@keyframes appear {
+@keyframes entrance {
   from {
     opacity: 0;
-    transform: translateY(25px);
+    transform: translateY(35px);
   }
   to {
     opacity: 1;
@@ -54,82 +119,210 @@ body {
   }
 }
 
-.logo {
-  font-size: 27px;
+.brand {
+  font-family: Orbitron, sans-serif;
+  font-size: 20px;
   font-weight: 900;
-  letter-spacing: 4px;
-  margin-bottom: 30px;
+  letter-spacing: 5px;
+  margin-bottom: 25px;
+  text-shadow: 0 0 25px #a855f788;
 }
 
-.logo span {
-  color: #b026ff;
+.brand span {
+  color: var(--pink);
+}
+
+/* PAINEL */
+
+.panel {
+  position: relative;
+  overflow: hidden;
+  padding: 45px 30px;
+  border: 1px solid #a855f744;
+  border-radius: 26px;
+  background: linear-gradient(145deg, #171022ed, #0d0918f5);
+  box-shadow:
+    0 0 60px #8b20cf20,
+    inset 0 0 40px #a855f708;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 15%;
+  width: 70%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e879c6, transparent);
+  box-shadow: 0 0 20px #e879c6;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 15px;
+  border: 1px solid #e879c655;
+  border-radius: 30px;
+  background: #e879c610;
+  color: #f2a5df;
+  font-size: 11px;
+  letter-spacing: 2px;
+  font-weight: 800;
+  margin-bottom: 15px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e879c6;
+  box-shadow: 0 0 12px #e879c6;
 }
 
 .error {
-  font-size: clamp(100px, 25vw, 175px);
+  font-family: Orbitron, sans-serif;
+  font-size: clamp(100px, 22vw, 190px);
   font-weight: 900;
-  line-height: 1;
-  background: linear-gradient(135deg, #a855f7, #ec72d0);
-  -webkit-background-clip: text;
+  line-height: 1.1;
+  letter-spacing: -12px;
+  background: linear-gradient(120deg, #c084fc, #e879c6, #8b5cf6);
   background-clip: text;
+  -webkit-background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 25px #a020ff66);
+  filter: drop-shadow(0 0 25px #a855f755);
+  animation: glow 4s ease-in-out infinite;
+}
+
+@keyframes glow {
+  50% {
+    filter: drop-shadow(0 0 45px #c026d355);
+  }
 }
 
 h1 {
-  font-size: clamp(22px, 5vw, 32px);
-  margin: 20px 0 12px;
+  font-size: clamp(23px, 5vw, 36px);
+  font-weight: 800;
+  margin: 12px 0;
 }
 
-p {
-  color: #aaa3bd;
-  line-height: 1.7;
-  margin-bottom: 25px;
+.description {
+  max-width: 520px;
+  margin: 0 auto;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.8;
 }
+
+/* PERSONAGEM DECORATIVA */
+
+.character {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 24px 0 5px;
+  width: 82px;
+  height: 82px;
+  border-radius: 24px;
+  border: 1px solid #b76aff55;
+  background: linear-gradient(145deg, #54207b66, #e879c622);
+  font-size: 43px;
+  box-shadow: 0 0 35px #a855f733;
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  50% { transform: translateY(-9px); }
+}
+
+/* BOTÕES */
 
 .buttons {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 13px;
+  margin-top: 27px;
 }
 
 .btn {
-  display: inline-block;
-  padding: 14px 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 50px;
+  padding: 13px 23px;
   border-radius: 12px;
+  border: 1px solid #a855f766;
   text-decoration: none;
-  font-weight: bold;
+  font-weight: 700;
+  font-size: 14px;
   color: white;
-  border: 1px solid #a855f7;
-  transition: .25s;
+  background: #ffffff08;
+  transition: .3s;
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #7925c9, #b026ff);
+  background: linear-gradient(120deg, #7925c9, #b026ff);
   border: none;
+  box-shadow: 0 5px 25px #a020ff44;
 }
 
 .btn:hover {
   transform: translateY(-4px);
-  box-shadow: 0 0 25px #a020ff66;
+  box-shadow: 0 0 28px #a855f755;
 }
 
+.btn.secondary:hover {
+  border-color: var(--pink);
+}
+
+/* RODAPÉ */
+
 footer {
-  margin-top: 35px;
-  color: #77718b;
-  font-size: 13px;
+  margin-top: 25px;
+  color: #797188;
+  font-size: 12px;
+  letter-spacing: .5px;
 }
 
 footer a {
-  color: #b77aff;
+  color: #c084fc;
   text-decoration: none;
-  margin: 0 7px;
+  margin: 0 8px;
 }
 
-@media(max-width: 480px) {
-  .container {
-    padding: 35px 18px;
+footer a:hover {
+  color: var(--pink);
+}
+
+.copyright {
+  margin-top: 12px;
+  color: #625970;
+}
+
+/* MOBILE */
+
+@media(max-width: 500px) {
+  main {
+    padding: 20px 13px;
+  }
+
+  .panel {
+    padding: 35px 19px;
+    border-radius: 20px;
+  }
+
+  .brand {
+    font-size: 17px;
+  }
+
+  .error {
+    letter-spacing: -7px;
+  }
+
+  .description {
+    font-size: 13px;
   }
 
   .buttons {
@@ -138,6 +331,12 @@ footer a {
 
   .btn {
     width: 100%;
+  }
+
+  .moon {
+    width: 160px;
+    height: 160px;
+    right: -35px;
   }
 }
 
@@ -152,58 +351,94 @@ footer a {
 
 <body>
 
-<main class="container">
+<div class="background">
+  <div class="grid"></div>
+  <div class="moon"></div>
+  <span class="petal">✿</span>
+  <span class="petal">✧</span>
+  <span class="petal">✿</span>
+  <span class="petal">✧</span>
+</div>
 
-  <div class="logo">
-    KIYORA <span>HUB</span>
-  </div>
+<main>
+  <div class="wrapper">
 
-  <div class="error">404</div>
-
-  <h1>Ops! Você se perdeu?</h1>
-
-  <p>
-    Parece que essa página desapareceu no universo
-    do Kiyora Hub. O endereço pode estar incorreto
-    ou a página não existe mais.
-  </p>
-
-  <div class="buttons">
-
-    <a href="/" class="btn primary">
-      ← Voltar ao início
-    </a>
-
-    <a
-      href="https://wa.me/5599920029406"
-      class="btn"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      Falar com suporte
-    </a>
-
-  </div>
-
-  <footer>
-    <div>
-      <a href="/privacidade.html">Privacidade</a>
-      <a href="/termos.html">Termos</a>
-      <a href="/suporte.html">Suporte</a>
+    <div class="brand">
+      KIYORA <span>HUB</span>
     </div>
 
-    <br>
+    <section class="panel">
 
-    © <span id="year"></span> Kiyora Hub
-    <br>
-    Made with ♥
-  </footer>
+      <div class="status">
+        <span class="dot"></span>
+        SYSTEM ERROR // 404
+      </div>
 
+      <div class="error">404</div>
+
+      <h1>Você encontrou o vazio...</h1>
+
+      <p class="description">
+        Parece que você foi longe demais.
+        Essa página não existe ou foi transportada
+        para outra dimensão. Que tal voltar ao
+        nosso universo?
+      </p>
+
+      <div class="character" aria-hidden="true">
+        🐈‍⬛
+      </div>
+
+      <div class="buttons">
+
+        <a href="/" class="btn primary">
+          ✦ Voltar ao início
+        </a>
+
+        <a
+          href="https://wa.me/5599920029406"
+          id="support"
+          class="btn secondary"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          ♡ Contatar suporte
+        </a>
+
+      </div>
+
+    </section>
+
+    <footer>
+      <div>
+        <a href="/privacidade.html">Privacidade</a>
+        <a href="/termos.html">Termos</a>
+        <a href="/suporte.html">Suporte</a>
+        <a href="/sobre.html">Sobre</a>
+      </div>
+
+      <div class="copyright">
+        © <span id="year">2026</span> KIYORA HUB
+        <br>
+        Crafted with ♥
+      </div>
+    </footer>
+
+  </div>
 </main>
 
 <script>
 document.getElementById("year").textContent =
   new Date().getFullYear();
+
+const support = document.getElementById("support");
+
+support.href =
+  "https://wa.me/5599920029406?text=" +
+  encodeURIComponent(
+    "Olá! Encontrei um erro 404 no Kiyora Hub: " +
+    location.href
+  );
 </script>
 
 </body>
