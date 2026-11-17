@@ -1,0 +1,263 @@
+#!/usr/bin/env python3
+"""kh: envie e baixe arquivos dos seus repositórios do Kiyora Hub pelo terminal.
+
+Uso:
+  python kh.py login [TOKEN]        salva seu token (gere em Repositórios > Conectar pelo terminal)
+  python kh.py whoami               mostra a conta conectada
+  python kh.py repos                lista seus repositórios
+  python kh.py new NOME [descrição] cria um repositório
+  python kh.py ls REPO              lista os arquivos do repositório
+  python kh.py push REPO [PASTA]    envia os arquivos de texto da pasta (padrão: pasta atual)
+        --dry   só mostra o que seria enviado
+  python kh.py pull REPO [PASTA]    baixa o repositório (use -f para sobrescrever)
+  python kh.py rm REPO ARQUIVO      apaga um arquivo do repositório
+  python kh.py logout               remove o token salvo
+"""
+import fnmatch, getpass, json, os, pathlib, re, stat, sys, urllib.error, urllib.request
+
+URL = os.environ.get("KH_URL", "https://kiyora-hub.pages.dev").rstrip("/")
+CFG = pathlib.Path(os.environ.get("KH_CONFIG", str(pathlib.Path.home() / ".kiyora.json")))
+UA = "kh-cli/1.0"
+MAX_CHARS, BATCH_FILES, BATCH_CHARS = 200000, 25, 1500000
+RE_PATH = re.compile(r"^[A-Za-z0-9._ -]+(/[A-Za-z0-9._ -]+){0,5}$")
+SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", ".idea", ".vscode", ".gradle", "dist", "build"}
+SKIP_FILES = [".env", ".env.*", "*.pem", "*.key", "*.p12", "id_rsa*", ".kiyora.json", ".DS_Store", "*.pyc", "*.log"]
+ERR = {
+    "token_invalido": "Token inválido ou revogado. Gere outro no site e rode: python kh.py login",
+    "conta_suspensa": "Sua conta está suspensa.",
+    "manutencao": "O Kiyora Hub está em manutenção. Tente mais tarde.",
+    "repo_nao_encontrado": "Repositório não encontrado (confira o nome com: python kh.py repos).",
+    "nome_invalido": "Nome inválido. Use letras, números, ponto, hífen e sublinhado (até 60).",
+    "repo_existe": "Você já tem um repositório com esse nome.",
+    "limite_repos": "Limite de repositórios atingido.",
+    "arquivo_nao_encontrado": "Arquivo não encontrado nesse repositório.",
+    "servidor_nao_configurado": "O servidor ainda não foi configurado pelo administrador do site.",
+    "muitas_requisicoes": "Muitas requisições. Aguarde um pouco e tente de novo.",
+}
+
+def die(msg, code=1):
+    print("erro: " + msg, file=sys.stderr)
+    sys.exit(code)
+
+def load():
+    try:
+        return json.loads(CFG.read_text()).get("token", "")
+    except Exception:
+        return ""
+
+def save(token):
+    CFG.write_text(json.dumps({"token": token}))
+    try:
+        CFG.chmod(stat.S_IRUSR | stat.S_IWUSR)
+    except Exception:
+        pass
+
+def api(token, op, **kw):
+    body = json.dumps(dict(op=op, **kw)).encode()
+    req = urllib.request.Request(URL + "/api/cli", data=body, method="POST", headers={
+        "authorization": "Bearer " + token, "content-type": "application/json", "user-agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        try:
+            j = json.loads(e.read().decode())
+        except Exception:
+            j = {}
+        key = j.get("error", "")
+        msg = ERR.get(key) or ("falha (%s) %s" % (e.code, key))
+        if key == "muitas_requisicoes" and j.get("retry_s"):
+            msg += " (cerca de %ss)" % j["retry_s"]
+        die(msg)
+    except urllib.error.URLError as e:
+        die("sem conexão com %s (%s)" % (URL, e.reason))
+
+def need_token():
+    t = os.environ.get("KH_TOKEN") or load()
+    if not t:
+        die("você ainda não fez login. Rode: python kh.py login")
+    return t
+
+def ignored(rel, patterns):
+    name = rel.split("/")[-1]
+    return any(fnmatch.fnmatch(name, p) or fnmatch.fnmatch(rel, p) for p in patterns)
+
+def collect(root):
+    pats = list(SKIP_FILES)
+    kh = root / ".khignore"
+    if kh.is_file():
+        pats += [l.strip() for l in kh.read_text(errors="ignore").splitlines() if l.strip() and not l.startswith("#")]
+    files, skipped = [], []
+    for dp, dns, fns in os.walk(root):
+        dns[:] = sorted(d for d in dns if d not in SKIP_DIRS)
+        for fn in sorted(fns):
+            full = pathlib.Path(dp) / fn
+            rel = full.relative_to(root).as_posix()
+            if ignored(rel, pats):
+                continue
+            if not RE_PATH.match(rel) or len(rel) > 200 or any(s in (".", "..") or s != s.strip() for s in rel.split("/")):
+                skipped.append((rel, "nome ou caminho não permitido (letras, números, . _ - e espaço; até 6 pastas)"))
+                continue
+            try:
+                data = full.read_bytes()
+            except Exception:
+                skipped.append((rel, "não foi possível ler"))
+                continue
+            if b"\x00" in data[:8000]:
+                skipped.append((rel, "arquivo binário (envie pelo site)"))
+                continue
+            try:
+                text = data.decode("utf-8")
+            except UnicodeDecodeError:
+                skipped.append((rel, "não é texto UTF-8"))
+                continue
+            if len(text) > MAX_CHARS:
+                skipped.append((rel, "maior que 200000 caracteres"))
+                continue
+            files.append((rel, text))
+    return files, skipped
+
+def cmd_login(a):
+    t = a[0] if a else getpass.getpass("Cole seu token (kh_...): ").strip()
+    if not re.match(r"^kh_[a-f0-9]{48}$", t):
+        die("token com formato inválido.")
+    j = api(t, "whoami")
+    save(t)
+    print("Conectado como %s (token: %s)." % (j.get("name") or j.get("uid"), j.get("token") or "sem nome"))
+
+def cmd_whoami(a):
+    j = api(need_token(), "whoami")
+    print("%s (id %s), token: %s" % (j.get("name") or "sem nome", j["uid"], j.get("token") or "sem nome"))
+
+def cmd_repos(a):
+    j = api(need_token(), "repos")
+    if not j["repos"]:
+        return print("Nenhum repositório. Crie com: python kh.py new NOME")
+    for r in j["repos"]:
+        print("%-30s %-12s %s" % (r["name"], r["lang"], r["desc"]))
+
+def cmd_new(a):
+    if not a:
+        die("uso: python kh.py new NOME [descrição]")
+    j = api(need_token(), "new", name=a[0], desc=" ".join(a[1:]))
+    print("Repositório criado: " + j["name"])
+
+def cmd_ls(a):
+    if not a:
+        die("uso: python kh.py ls REPO")
+    j = api(need_token(), "ls", repo=a[0])
+    if not j["files"]:
+        return print("(vazio)")
+    for f in j["files"]:
+        print("%8d  %s%s" % (f["size"], f["path"], "  [binário]" if f["bin"] else ""))
+
+def cmd_push(a):
+    dry = "--dry" in a
+    a = [x for x in a if x != "--dry"]
+    if not a:
+        die("uso: python kh.py push REPO [PASTA] [--dry]")
+    root = pathlib.Path(a[1] if len(a) > 1 else ".").resolve()
+    if not root.is_dir():
+        die("pasta não encontrada: %s" % root)
+    files, skipped = collect(root)
+    print("%d arquivo(s) de texto para enviar de %s" % (len(files), root))
+    for rel, why in skipped:
+        print("  ignorado: %s (%s)" % (rel, why))
+    if dry or not files:
+        for rel, _ in files:
+            print("  " + rel)
+        return
+    t = need_token()
+    sent = 0
+    rejected = []
+    batch, size = [], 0
+    def flush():
+        nonlocal batch, size, sent
+        if not batch:
+            return
+        j = api(t, "push", repo=a[0], files=[{"path": p, "content": c} for p, c in batch])
+        sent += len(j.get("sent", []))
+        rejected.extend(j.get("rejected", []))
+        for p in j.get("sent", []):
+            print("  enviado: " + p)
+        batch, size = [], 0
+    for rel, text in files:
+        if batch and (len(batch) >= BATCH_FILES or size + len(text) > BATCH_CHARS):
+            flush()
+        batch.append((rel, text))
+        size += len(text)
+    flush()
+    for r in rejected:
+        print("  recusado pelo servidor: %s (%s)" % (r["path"], r["reason"]))
+    print("Pronto: %d enviado(s), %d recusado(s)." % (sent, len(rejected)))
+
+def cmd_pull(a):
+    force = "-f" in a
+    a = [x for x in a if x != "-f"]
+    if not a:
+        die("uso: python kh.py pull REPO [PASTA] [-f]")
+    t = need_token()
+    dest = pathlib.Path(a[1] if len(a) > 1 else a[0]).resolve()
+    ls = api(t, "ls", repo=a[0])["files"]
+    done = 0
+    for i in range(0, len(ls), 10):
+        chunk = ls[i:i + 10]
+        got = api(t, "get", repo=a[0], paths=[f["path"] for f in chunk])["files"]
+        for f in got:
+            rel = f["path"]
+            if rel.startswith("/") or any(s in ("", ".", "..") for s in rel.split("/")):
+                print("  ignorado (caminho suspeito): " + rel)
+                continue
+            out = (dest / rel).resolve()
+            if dest not in out.parents:
+                print("  ignorado (fora da pasta): " + rel)
+                continue
+            if out.exists() and not force:
+                print("  já existe (use -f para sobrescrever): " + rel)
+                continue
+            out.parent.mkdir(parents=True, exist_ok=True)
+            if f.get("url"):
+                if not f["url"].startswith("https://"):
+                    continue
+                try:
+                    req = urllib.request.Request(f["url"], headers={"user-agent": UA})
+                    with urllib.request.urlopen(req, timeout=60) as r:
+                        out.write_bytes(r.read())
+                except Exception as e:
+                    print("  falhou o download de %s (%s)" % (rel, e))
+                    continue
+            else:
+                out.write_text(f["content"], encoding="utf-8")
+            done += 1
+            print("  baixado: " + rel)
+    print("Pronto: %d arquivo(s) em %s" % (done, dest))
+
+def cmd_rm(a):
+    if len(a) < 2:
+        die("uso: python kh.py rm REPO ARQUIVO")
+    api(need_token(), "rm", repo=a[0], path=a[1])
+    print("Apagado: " + a[1])
+
+def cmd_logout(a):
+    try:
+        CFG.unlink()
+    except FileNotFoundError:
+        pass
+    print("Token removido deste aparelho. Para revogar de vez, use o site.")
+
+CMDS = {"login": cmd_login, "whoami": cmd_whoami, "repos": cmd_repos, "new": cmd_new, "ls": cmd_ls,
+        "push": cmd_push, "pull": cmd_pull, "rm": cmd_rm, "logout": cmd_logout}
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help", "help"):
+        return print(__doc__)
+    f = CMDS.get(sys.argv[1])
+    if not f:
+        die("comando desconhecido: %s. Rode: python kh.py help" % sys.argv[1])
+    f(sys.argv[2:])
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        die("cancelado", 130)
