@@ -1,0 +1,30 @@
+name: Testes
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Sintaxe do kh.py
+        run: python -m py_compile kh.py
+      - name: Servidor do terminal e kh.py
+        run: node tests/cli.test.mjs
+      - name: Site (histórico, tokens, importação)
+        run: |
+          node tests/ui.test.cjs
+          node tests/ui2.test.cjs
+      - name: README (Markdown e segurança)
+        run: |
+          node tests/md1.test.cjs
+          node tests/md2.test.cjs
+          
