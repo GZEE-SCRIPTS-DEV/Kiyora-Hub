@@ -11,11 +11,15 @@
   # CSP completo em modo de teste: só avisa no console (F12), não bloqueia.
   # Quando não houver avisos ao navegar, troque o nome por "Content-Security-Policy".
   # Atenção: os hashes sha256 mudam toda vez que o <script> do index.html for editado.
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'sha256-a+4ir7QZh3Pjd0jSbROj3cxkQQ7XDlFK+VYSt5v2iwQ=' 'sha256-69HFJRerxtFi/ylYXf5oxH9e+6BQyafru+EASYS7qLw=' 'sha256-jJxjL6+XIk5TfagzMRDcE3WrTmySdy8olhAZPjiUqMw=' 'sha256-onU9P3R1nlN9E4lxTVAOq+GwlFlMSCbODUoWdCi1VM8=' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://zone.api.br https://cdn.zone.api.br; frame-src https://kiyora-hub-6c399.firebaseapp.com https://accounts.google.com; worker-src 'self' blob:; manifest-src 'self'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'sha256-a+4ir7QZh3Pjd0jSbROj3cxkQQ7XDlFK+VYSt5v2iwQ=' 'sha256-2pjGFq1PX3a65dDUBQBFguvvr85xQNlpS1SkcvKTC0w=' 'sha256-jJxjL6+XIk5TfagzMRDcE3WrTmySdy8olhAZPjiUqMw=' 'sha256-onU9P3R1nlN9E4lxTVAOq+GwlFlMSCbODUoWdCi1VM8=' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://zone.api.br https://cdn.zone.api.br; frame-src https://kiyora-hub-6c399.firebaseapp.com https://accounts.google.com; worker-src 'self' blob:; manifest-src 'self'
 
 /functions/*
   Cache-Control: no-store
 
 /kh.py
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: no-cache
+
+/install.sh
   Content-Type: text/plain; charset=utf-8
   Cache-Control: no-cache
